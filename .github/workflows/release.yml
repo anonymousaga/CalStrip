@@ -52,8 +52,6 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=macOS' \
             -derivedDataPath ./build \
-            ARCHS="arm64 x86_64" \
-            ONLY_ACTIVE_ARCH=NO \
             MARKETING_VERSION="$VERSION" \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
@@ -61,13 +59,13 @@ jobs:
 
           ditto -c -k --sequesterRsrc --keepParent \
             ./build/Build/Products/Release/CalStrip.app \
-            "dist/CalStrip-v${VERSION}-darwin-universal.zip"
+            "dist/CalStrip-v${VERSION}-darwin-arm64.zip"
 
       - name: Verify release archive
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          ARCHIVE="dist/CalStrip-v${VERSION}-darwin-universal.zip"
+          ARCHIVE="dist/CalStrip-v${VERSION}-darwin-arm64.zip"
           test -s "$ARCHIVE"
           ditto -x -k "$ARCHIVE" /tmp/verify-calstrip
           test -d "/tmp/verify-calstrip/CalStrip.app"
@@ -81,7 +79,7 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           gh release create "$TAG" \
-            "dist/CalStrip-v${VERSION}-darwin-universal.zip" \
+            "dist/CalStrip-v${VERSION}-darwin-arm64.zip" \
             --title "v${VERSION}" \
             --generate-notes
 
@@ -108,7 +106,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           REPO: ${{ github.repository }}
         run: |
-          SHA256=$(shasum -a 256 "dist/CalStrip-v${VERSION}-darwin-universal.zip" | awk '{print $1}')
+          SHA256=$(shasum -a 256 "dist/CalStrip-v${VERSION}-darwin-arm64.zip" | awk '{print $1}')
           mkdir -p "$BREW_TAP_DIR/Casks"
 
           cat <<EOF > "$BREW_TAP_DIR/Casks/calstrip.rb"
@@ -116,7 +114,7 @@ jobs:
             version "${VERSION}"
             sha256 "${SHA256}"
 
-            url "https://github.com/${REPO}/releases/download/v#{version}/CalStrip-v#{version}-darwin-universal.zip"
+            url "https://github.com/${REPO}/releases/download/v#{version}/CalStrip-v#{version}-darwin-arm64.zip"
             name "CalStrip"
             desc "Strips invite metadata and converts timezones for imported .ics calendar files"
             homepage "https://github.com/${REPO}"
