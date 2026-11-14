@@ -35,13 +35,19 @@ jobs:
           esac
           echo "tag=$REF_NAME" >> "$GITHUB_OUTPUT"
 
+      - name: Select latest Xcode
+        run: |
+          LATEST_XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -n 1)
+          sudo xcode-select -s "$LATEST_XCODE/Contents/Developer"
+          xcodebuild -version
+
       - name: Build unsigned release
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p dist
           xcodebuild build \
-            -project CalStrip.xcodeproj \
+            -project CalStrip/CalStrip.xcodeproj \
             -scheme CalStrip \
             -configuration Release \
             -destination 'generic/platform=macOS' \
