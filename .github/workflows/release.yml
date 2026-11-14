@@ -47,7 +47,7 @@ jobs:
         run: |
           mkdir -p dist
           xcodebuild build \
-            -project CalStrip/CalStrip.xcodeproj \
+            -project CalStrip.xcodeproj \
             -scheme CalStrip \
             -configuration Release \
             -destination 'generic/platform=macOS' \
