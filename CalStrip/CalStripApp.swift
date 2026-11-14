@@ -15,10 +15,15 @@ struct CalStripApp: App {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    private var openedWithFile = false
+
     func application(_ application: NSApplication, open urls: [URL]) {
+        openedWithFile = true
+
         for url in urls {
             processICSFile(at: url)
         }
+
         // Quit cleanly after handing off to Apple Calendar
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             NSApplication.shared.terminate(nil)
@@ -26,22 +31,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // If launched manually without a file (e.g., double-clicked in Applications), open a file picker
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            if NSApp.windows.isEmpty {
-                let panel = NSOpenPanel()
-                panel.allowedContentTypes = [.init(filenameExtension: "ics")!]
-                panel.allowsMultipleSelection = true
-                panel.message = "Select .ics files to clean and import into Calendar"
-                
-                if panel.runModal() == .OK {
-                    for url in panel.urls {
-                        self.processICSFile(at: url)
-                    }
-                }
-                NSApplication.shared.terminate(nil)
+        // Skip the file picker if macOS already delivered a file via application(_:open:)
+        guard !openedWithFile else { return }
+
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [UTType(filenameExtension: "ics") ?? .calendarEvent]
+        panel.allowsMultipleSelection = true
+        panel.message = "Select .ics files to clean and import into Calendar"
+
+        if panel.runModal() == .OK {
+            for url in panel.urls {
+                processICSFile(at: url)
             }
         }
+
+        NSApplication.shared.terminate(nil)
     }
 
     private func processICSFile(at url: URL) {
