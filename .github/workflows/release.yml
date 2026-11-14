@@ -90,7 +90,7 @@ jobs:
           fi
 
       - name: Check out Homebrew tap
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           repository: anonymousaga/homebrew-tap
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
