@@ -1,4 +1,4 @@
-# [<img src="CalStrip/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="40"/>](icon.png) CalStrip
+# [<img src="CalStrip/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png" width="40"/>](CalStrip/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png) CalStrip
 
 A lightweight macOS utility that strips meeting invite metadata and converts event timestamps to your local timezone before importing `.ics` files into Apple Calendar.
 
