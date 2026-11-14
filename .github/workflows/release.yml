@@ -1,0 +1,128 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to build (for example v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Select release version
+        id: version
+        env:
+          REF_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          case "$REF_NAME" in
+            v[0-9]*) echo "version=${REF_NAME#v}" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Expected a v-prefixed release tag, got: $REF_NAME" >&2; exit 1 ;;
+          esac
+          echo "tag=$REF_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Build unsigned release
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p dist
+          xcodebuild build \
+            -project CalStrip.xcodeproj \
+            -scheme CalStrip \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath ./build \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            MARKETING_VERSION="$VERSION" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+          ditto -c -k --sequesterRsrc --keepParent \
+            ./build/Build/Products/Release/CalStrip.app \
+            "dist/CalStrip-v${VERSION}-darwin-universal.zip"
+
+      - name: Verify release archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          ARCHIVE="dist/CalStrip-v${VERSION}-darwin-universal.zip"
+          test -s "$ARCHIVE"
+          ditto -x -k "$ARCHIVE" /tmp/verify-calstrip
+          test -d "/tmp/verify-calstrip/CalStrip.app"
+          codesign --verify --deep --strict "/tmp/verify-calstrip/CalStrip.app"
+          rm -rf /tmp/verify-calstrip
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh release create "$TAG" \
+            "dist/CalStrip-v${VERSION}-darwin-universal.zip" \
+            --title "v${VERSION}" \
+            --generate-notes
+
+      - name: Check Homebrew tap token
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "::error::Repository secret HOMEBREW_TAP_TOKEN is not configured."
+            echo "Create a fine-grained token with Contents read/write access to anonymousaga/homebrew-tap and add it as this repository secret."
+            exit 1
+          fi
+
+      - name: Check out Homebrew tap
+        uses: actions/checkout@main
+        with:
+          repository: anonymousaga/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update Homebrew tap
+        env:
+          BREW_TAP_DIR: ${{ github.workspace }}/homebrew-tap
+          VERSION: ${{ steps.version.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          SHA256=$(shasum -a 256 "dist/CalStrip-v${VERSION}-darwin-universal.zip" | awk '{print $1}')
+          mkdir -p "$BREW_TAP_DIR/Casks"
+
+          cat <<EOF > "$BREW_TAP_DIR/Casks/calstrip.rb"
+          cask "calstrip" do
+            version "${VERSION}"
+            sha256 "${SHA256}"
+
+            url "https://github.com/${REPO}/releases/download/v#{version}/CalStrip-v#{version}-darwin-universal.zip"
+            name "CalStrip"
+            desc "Strips invite metadata and converts timezones for imported .ics calendar files"
+            homepage "https://github.com/${REPO}"
+
+            app "CalStrip.app"
+          end
+          EOF
+
+          git -C "$BREW_TAP_DIR" config user.name "github-actions[bot]"
+          git -C "$BREW_TAP_DIR" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$BREW_TAP_DIR" add Casks/calstrip.rb
+          if ! git -C "$BREW_TAP_DIR" diff --cached --quiet; then
+            git -C "$BREW_TAP_DIR" commit -m "calstrip ${VERSION}"
+            git -C "$BREW_TAP_DIR" push
+          fi
