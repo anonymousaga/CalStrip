@@ -20,11 +20,10 @@ When you open an `.ics` file with CalStrip, it:
 
 ### Homebrew (Recommended)
 
-Install directly from the tap with `--no-quarantine` to avoid Gatekeeper prompts:
-
 ```bash
 brew tap anonymousaga/tap
-brew install --cask --no-quarantine calstrip
+brew trust anonymousaga/tap
+brew install --cask calstrip
 ```
 
 ### Manual Download
@@ -34,22 +33,15 @@ brew install --cask --no-quarantine calstrip
 
 ## Bypassing macOS Gatekeeper
 
-Because CalStrip is ad-hoc signed rather than notarized with a paid Apple Developer certificate, macOS Gatekeeper will block it on first launch unless installed with `--no-quarantine`.
+Because CalStrip is ad-hoc signed rather than notarized with a paid Apple Developer certificate, macOS Gatekeeper will block it on first launch and on updates.
 
-### Option 1: Remove the Quarantine Attribute in Terminal
+### Remove the Quarantine Attribute in Terminal
 
 Run the following command after moving `CalStrip.app` to `/Applications`:
 
 ```bash
 xattr -cr /Applications/CalStrip.app
 ```
-
-### Option 2: Allow via System Settings
-
-1. Double-click **CalStrip.app** in `/Applications` and dismiss the blocked app dialog.
-2. Open **System Settings** > **Privacy & Security**.
-3. Scroll down to the **Security** section and click **Open Anyway** next to `"CalStrip" was blocked to protect your Mac`.
-4. Confirm by clicking **Open Anyway** and entering your Mac password or Touch ID.
 
 ## Set CalStrip as the Default App for All `.ics` Files
 
@@ -65,4 +57,5 @@ To have macOS automatically route every `.ics` file through CalStrip when double
 ## Usage
 
 * **Automatic (Default Handler):** Double-click any `.ics` file in Finder (or open an `.ics` attachment from your browser or email client). CalStrip will clean the file, open it in Apple Calendar, and exit immediately.
+* **Dock Icon Import:** Add **CalStrip.app** to the Dock, then drag an `.ics` file onto it to convert and import the ics file.
 * **Manual Batch Import:** Launch **CalStrip.app** directly from `/Applications` or Spotlight to open a file picker where you can select one or multiple `.ics` files at once.
