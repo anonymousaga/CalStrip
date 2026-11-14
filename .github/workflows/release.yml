@@ -57,6 +57,8 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
+          codesign --force --deep --sign - ./build/Build/Products/Release/CalStrip.app
+
           ditto -c -k --sequesterRsrc --keepParent \
             ./build/Build/Products/Release/CalStrip.app \
             "dist/CalStrip-v${VERSION}-darwin-arm64.zip"
